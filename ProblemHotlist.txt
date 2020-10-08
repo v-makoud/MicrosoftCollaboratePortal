@@ -1,0 +1,347 @@
+= Problem Hotlist =
+
+[[PageOutline(1-3,Table of Contents,inline)]]
+
+== Incorrect version of Xcode selected == #xcode-select
+{{{#!html
+<!-- Keep this here for compatibility with old links to this page -->
+<a id="xcode43"></a>
+}}}
+
+There have been reports of xcode-select not pointing to the new Xcode location for some users after upgrading from an Xcode version older than 4.3. If you are having problems even with the latest MacPorts version and `xcode-select -print-path` does not print `/Applications/Xcode.app/Contents/Developer` on your system, or
+{{{
+Warning: Xcode appears to be installed but xcodebuild is unusable; some ports will likely fail to build.
+}}}
+then you need to run:
+{{{
+sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
+}}}
+
+This is particularly important for people who have error messages referring to their old compiler locations after installing Xcode later than 4.2: you need to reinstall the package that stored the old compiler location if you see an error message like this:
+{{{
+error: can't exec '/Developer/usr/bin/<compiler>' (No such file or directory)
+}}}
+So far this error is seen in previously-built perl and python when building perl or python modules.  For example, if a py27-xxxx port fails to install and the log contains error messages of this type, try reinstalling the main python27 port with:
+{{{
+sudo port -n upgrade --force python27
+}}}
+
+Note you might have an older version of the `xcode-select` tool in case you installed Xcode 4.2 after installing the Mac OS X 10.7.3 update. If the command `xcode-select -version` returns `version 2003`, this is from Xcode 4.2 and we recommend to install the update once again with the [http://support.apple.com/kb/DL1484 Mac OS X 10.7.3 combo updater]. The current `xcode-select` version that comes with Mac OS X 10.7.3 identifies itself as `version 2307`.
+
+
+== Port installation fails with "no destroot found" == #nodestrootfound
+
+Installing a port fails with the error message "no destroot found", for example:
+
+{{{
+:error:install org.macports.install for port libpixman returned: no destroot found at: /opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_tarballs_ports_graphics_libpixman/libpixman/work/destroot
+}}}
+
+This happens when you have existing files that conflict with the ones that a port wants to install, so the port fails to activate, and you then uninstall the port and try to install it again without cleaning it first. The workaround is to clean the affected port and try again. For example the above error shows libpixman is the port that failed, so to clean it you would run:
+
+{{{
+sudo port clean libpixman
+}}}
+
+Ticket tracking this issue: #55445
+
+== install_name_tool or strip reports "malformed object (unknown load command)" == #malformed-object
+
+An error message like:
+{{{
+install_name_tool: object: libfoo.dylib malformed object (unknown load command 8)
+}}}
+or:
+{{{
+strip: object: libbar.dylib malformed object (unknown load command 9)
+}}}
+indicates that your `install_name_tool` or `strip` commands (both are part of the Xcode command line tools) are too old to deal with the types of objects produced by the compiler. (The number after "unknown load command" may be different.) This can happen if you have forgotten to [https://guide.macports.org/chunked/installing.html#installing.xcode update the Xcode command line tools] to a version designed for your version of OS X.
+
+== Incompatible library version: X requires version 8.0.0 or later, but libiconv.2.dylib provides version 7.0.0 == #libiconv-version
+
+You might see this error when running a program, or in the main.log or config.log when a port fails to configure or build:
+
+{{{
+dyld: Library not loaded: /opt/local/lib/libiconv.2.dylib
+  Referenced from: /path/to/X
+  Reason: Incompatible library version: X requires version 8.0.0 or later, but libiconv.2.dylib provides version 7.0.0
+}}}
+
+This usually means libiconv is installed for the wrong architecture(s) and needs to be rebuilt. To rebuild libiconv:
+
+{{{
+sudo port -n upgrade --force libiconv
+}}}
+
+But if libiconv's architecture was wrong, it's likely other ports have the similar problem. The usual reason for architecture mismatches is that you migrated from Leopard or earlier to Snow Leopard or later and did not follow the [wiki:Migration migration instructions].
+Another possible culprit is installing a third-party software package that was itself created using MacPorts, which overwrote some of your MacPorts files; see [#xmlwf] for more on this.
+
+The error message is confusing. What OS X should be saying is: "The program or library X is linked with /opt/local/lib/libiconv.2.dylib and requires version 8.0.0 of that library. /opt/local/lib/libiconv.2.dylib is at least version 8.0.0, but it's built for the wrong architecture, so I'm going to look around for another libiconv.2.dylib. Ok, I found /usr/lib/libiconv.2.dylib and it's built for the right architectures, so I'll use that instead. Wait, /usr/lib/libiconv.2.dylib is only version 7.0.0. That's too old for X. I'll display an error message that the version is too old."
+
+Another possible culprit is that you have DYLD_LIBRARY_PATH set in your environment; if so, try unsetting it.
+
+
+== man port fails with error message == #manpath
+
+'''Error message:'''[[BR]]
+{{{
+$ man port
+Cannot open the message catalog "man" for locale "de_DE.UTF-8" (NLSPATH="<none>")
+No manual entry for port
+}}}
+
+'''Workaround:'''[[BR]]
+
+Add the following line to your .profile or .bash_profile.
+{{{
+unset MANPATH
+}}}
+
+'''Ticket:''' #13444[[BR]]
+
+== port fails with: Image error: /opt/local/bin/a2p... == #perl5-image-error
+
+'''Error message:'''[[BR]]
+{{{
+Error: Activating perl5 @5.12.3_1 failed: Image error: /opt/local/bin/a2p is being used by the active perl5.8 port.  Please deactivate this port first, or use the -f flag to force the activation.
+}}}
+
+The perl5.8, perl5.10 and perl5.12 ports used to conflict with each other unless a particular variant was selected. This has now been solved by suffixing their binaries with a version number, and the perl5 port installs links without any suffix. The old versions of perl5.x conflict with the current version of perl5.
+
+'''Fix:'''[[BR]]
+To fix this issue, upgrade whichever of the above ports that you have installed.
+{{{
+port upgrade installed and \( perl5.8 perl5.10 perl5.12 \)
+}}}
+
+== Fetch failures == #fetch-failures
+
+If fetch failed for a port, you can still get the distfile from anywhere else. For example, the [http://distfiles.macports.org/ main MacPorts distfiles mirror] contains most ports' distfiles, or maybe the homepage of the software lists alternative download locations for source tarballs. Just download the distfile and save it to the path shown by `port distfiles <portname>`. Make sure you get a file with exactly the same name (watch out for `.tar.gz` and `.tar.bz2`!) If a `port clean --all` has been done the distfile directory will have been removed. The directory for each port is created at the beginning of the fetch phase. After placing the distfile, run `port install <portname>`again.
+
+'''Note:''' Checksum failures after a fetch are typically a separate issue.  See the [wiki:FAQ#checksums FAQ].
+
+== Image error: /opt/local/bin/xmlwf already exists and does not belong to a registered port == #xmlwf
+
+When installing a port with MacPorts, you encounter this error:
+{{{
+Error: Target org.macports.activate returned: Image error: /opt/local/bin/xmlwf already exists and does not belong to a registered port.  Unable to activate port expat.
+}}}
+xmlwf is a part of the expat port (which is a dependency of many other ports, and thus is likely to be one of the first ports to ever get installed), but for some reason this file already exists on your computer, and MacPorts did not install it.
+
+One possible reason for this is that you have installed a 3rd-party software package—possibly [http://gprolog.univ-paris1.fr/#download gprolog] or [http://www.swi-prolog.org/download/stable swi-prolog] or [http://eduo.info/apps/smbup SMBup]—which was itself built with MacPorts, set to its default prefix, and therefore conflicts with your normal use of MacPorts in its default prefix. The developers of the 3rd-party package you installed should not have distributed their software in this manner; they should have configured MacPorts in a custom prefix instead, one that is unique to their software. (For example, in the case of swi-prolog, /usr/local/swi-prolog or /opt/swi-prolog would be good choices.)
+
+Another possible reason is that you previously had MacPorts (and expat and probably other ports) installed, then somehow uninstalled MacPorts itself, or at least its registry of which ports are installed, without actually uninstalling those ports, and have now installed MacPorts again with a clean registry, which therefore thinks no ports are installed, though some still are.
+
+Either way, the cleanest solution at this point is to follow the [https://guide.macports.org/chunked/installing.macports.uninstalling.html MacPorts uninstallation instructions]. This will remove the 3rd-party software package that installed itself unannounced into MacPorts' prefix, and/or ports installed by your prior MacPorts installation. Then you can [https://guide.macports.org/chunked/installing.macports.html install MacPorts] again.
+
+== A port failed to build with a message referring to 1/lib: No such file or directory == #lib-spaces
+
+'''Error message:'''[[BR]]
+{{{
+apple-darwin9-gcc-4.0.1: 1/lib: No such file or directory
+make: *** Error 1
+}}}
+
+'''Explanation:'''[[BR]]
+When upgrading from Tiger to Leopard without removing the previous Mac OS version, updated versions of some libraries in {{{/usr/}}} and {{{/usr/lib/}}} are moved from {{{/old/path/}}} to {{{/old/path 1/}}}. Notice the space before {{{1}}}. This makes some {{{configure}}} scripts build bad build instructions, making the build phases of several ports fail.
+
+Two incriminated directories have been encountered :
+
+{{{
+/usr/X11R6 1/
+/usr/lib/ruby 1/
+}}}
+
+'''Workaround:'''[[BR]]
+
+In order to fix this problem, you can remove the backups created by the installers, and then clean the work directory of the failed port so that its configure script will be re-run:
+{{{
+port clean --work <port>
+}}}
+
+
+
+== Reinstalling the command line tools == #reinstall-clt
+
+When the command line tools package is installed, a receipt is generated that can be accessed with `/usr/sbin/pkgutil`.
+When upgrading Xcode, this receipt can be lost even though the command line tools remain installed.
+Without this receipt, MacPorts cannot determine which version of the command line tools package is installed.
+
+'''Fix:'''[[BR]]
+
+Reinstalling the command line tools package fixes the problem.
+* Download the command line tools package from the [https://developer.apple.com/download/more/?=command%20line%20tools Apple Developer] site.
+* If the version of the CLT you need is not listed at the developer site, but an older version is, reinstalling that will restore the package receipts. Then just run Software Update to trigger the update to the newer version.
+* Or, on Mac OS X 10.9 or greater, Software Update can reinstall the package:
+  * {{{sudo touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress}}}
+  * {{{softwareupdate -l}}}
+  * [https://support.apple.com/en-us/HT201541 Run Software Update]
+  * {{{sudo rm /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress}}}
+Please note that Software Update will continue to list the command line tools package as outdated so long as the file `/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress` exists.[[BR]]
+Be sure to remove it once the package is reinstalled.
+
+{{{
+#!comment
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ The only purpose of this comment is to make it visually easier to find the Retired Problems section when editing.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+}}}
+
+
+
+
+= Retired Problems =
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+The following problems are now solved, no longer apply to current MacPorts or should no longer be happening due to other circumstances. They are kept here for future reference and to avoid breaking existing links.
+}}}
+
+== Build failures after upgrading to Xcode 7.2 == #xcode7.2
+
+After installing the update to Xcode 7.2, port installations or upgrades using `xcodebuild` may fail with the following error due to an error in the Xcode installation. This has been fixed by Apple in Xcode 7.3.
+
+{{{
+Could not find service "com.apple.CoreSimulator.CoreSimulatorService" in domain for uid: 502
+2015-12-10 17:21:27.407 xcodebuild[7363:75765] launchctl print returned an error code: 28928
+2015-12-10 17:21:27.407 xcodebuild[7363:75765] Failed to locate a valid instance of CoreSimulatorService in the bootstrap.  Adding it now.
+Could not find service "com.apple.CoreSimulator.CoreSimulatorService" in domain for uid: 502
+2015-12-10 17:21:27.431 xcodebuild[7363:75765] launchctl print returned an error code: 28928
+2015-12-10 17:21:27.431 xcodebuild[7363:75765] *** Assertion failure in -[SimServiceContext reloadServiceIfMovedOrAbortIfWeAreInvalid], /BuildRoot/Library/Caches/com.apple.xbs/Sources/CoreSimulator/CoreSimulator-201.3/CoreSimulator/SimServiceContext.m:451
+** INTERNAL ERROR: Uncaught exception **
+Exception: Unable to lookup com.apple.CoreSimulator.CoreSimulatorService in the bootstrap.  This can happen if running with a sandbox profile.  When running with a sandbox profile, make sure that com.apple.CoreSimulator.CoreSimulatorService.xpc is owned by root, not group writable, and not world writable.  See <rdar://problem/22142915>.
+}}}
+
+'''For OS X 10.11, please update to Xcode 7.3 to fix the permissions.'''
+
+Updating to Xcode 7.3 appears to be no longer automatic in App Store Updates. You may try updating from the Xcode App Store page directly, or obtaining Xcode 7.3 via Apple's Developer downloads area.
+
+'''For OS X 10.10, or as an alternative,''' the workaround is to manually fix the permissions of the path mentioned in the error message. User should be 'root', group should be 'wheel', and write permissions only granted for the owner:
+
+{{{
+sudo chmod -R g-w $(xcode-select -p)/Library/PrivateFrameworks/CoreSimulator.framework/Versions/A/XPCServices/com.apple.CoreSimulator.CoreSimulatorService.xpc
+sudo chown -R root:wheel $(xcode-select -p)/Library/PrivateFrameworks/CoreSimulator.framework/Versions/A/XPCServices/com.apple.CoreSimulator.CoreSimulatorService.xpc
+}}}
+
+
+== Build failures after upgrading to ncurses 6 == #ncurses6
+
+After upgrading ncurses to version 6, a port may fail to build, with the following error message in the main.log or config.log file:
+
+{{{
+dyld: Library not loaded: /opt/local/lib/libncurses.5.dylib
+  Referenced from: /opt/local/lib/libreadline.6.dylib
+  Reason: no suitable image found.  Did find:
+	/usr/lib/libncurses.5.dylib: no matching architecture in universal wrapper
+}}}
+
+The solution is to upgrade readline:
+
+{{{
+sudo port upgrade readline
+}}}
+
+Then clean the port that originally failed to build, and try to build it again.
+
+The problem occurs when building ports that use an autotools-based configure script, after having upgraded ncurses to version 6 but before having upgraded readline to use ncurses 6. The reason the problem occurs is that part of the boilerplate that autotools bakes into every configure script is to locate an awk implementation. The first one it checks for is gawk, so if the gawk port happens to be installed, a configure script will try to use that. gawk depends on readline, which depends on ncurses, and if you have upgraded ncurses but haven't upgraded readline to use the new ncurses, then gawk will be broken.
+
+MacPorts usually upgrades dependencies first, so you wouldn't see this problem if gawk were listed as a dependency of the port that failed to build. But we don't want to add unnecessary gawk dependencies to thousands of configure-based ports when the awk implementation that's part of OS X would work just as well.
+
+
+== Error message from "port upgrade outdated": uninstall failure: "an invalid entry was passed" == #interrupteduninstall
+
+Before MacPorts 2.1.3 it was possible to leave the registry in an inconsistent state if an uninstallation was interrupted. Although this has been fixed in version 2.1.3, the fix does not cure a previously corrupt registry.
+
+The perl script attached to the ticket [ticket:34482 about this bug] fixes the registry. The direct link is [attachment:ticket:34482:macports_34482_fix here].
+
+
+== MacPorts `port install`s fail after an OS X upgrade ==
+
+An installation of MacPorts and the ports installed by it are only designed to work on a single OS release and a single CPU architecture. So in most cases, MacPorts needs to be reinstalled after an OS upgrade.
+
+See [wiki:Migration], for OS X Mavericks problems see [wiki:MavericksProblems].
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+'''Note:''' Starting with MacPorts 2.3.0, MacPorts will print an error message if this occurs and direct you to [wiki:Migration]. The message will read:
+{{{
+Current platform "darwin YZ" does not match expected platform "darwin XY"
+If you upgraded your OS, please follow the migration instructions: https://trac.macports.org/wiki/Migration
+}}}
+}}}
+
+== Can't find Tcl configuration definitions == #tclConfig
+
+When installing MacPorts from source on 10.9, you may encounter the error
+
+{{{
+checking for Tcl configuration... configure: error: Can't find Tcl configuration definitions
+}}}
+
+The file `tclConfig.sh` was included in the Mac OS X base in earlier releases, but was moved to the Xcode Command Line Tools in 10.9; these are normally installed the first time you run `clang` after accepting the Xcode license, but running the `configure` script doesn't run `clang` until after the Tcl check. The easiest way to force installation is to run:
+
+{{{
+xcode-select --install
+}}}
+
+after installing Xcode 5.0.1 or later.
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+'''Note:''' This can no longer occur starting with MacPorts 2.3.0, because it ships its own copy of Tcl.
+}}}
+
+== MacPorts `port install`s fail on OS X Lion 10.7 after a fresh App Store installation of Xcode ==
+The `port` command will remind you to install Xcode (or upgrade if you have an old version lying around from a previous installation of OS X). This is most easily accomplished using the "App Store" application on your Mac, which requires an Apple ID. Xcode 4.5 is the version currently available for Lion from the App Store.
+
+However, as with Xcode 4.3 and later (below), the command line tools required for the build process are not installed automatically and require an additional manual step to [#clt install the tools] through Xcode's preferences.
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+'''Note:''' MacPorts 2.3.0 will print a warning if the command line tools are missing and advise you how to install them. On systems below 10.9, the message should read:
+{{{
+The Xcode Command Line Tools don't appear to be installed; most ports will likely fail to build.
+You can install them from Xcode's Preferences in the Downloads section.
+See https://guide.macports.org/chunked/installing.html#installing.xcode.lion for more information.
+}}}
+}}}
+
+== Missing Command Line Tools == #clt
+Xcode 4.3 and later do not include a fully working set of command line tools by default. Starting with Mavericks, shims in `/usr/bin` will check for an Xcode installation and automatically use the tools provided by it. In the first case, nothing will build, in the second case, most ports will build, but some will fail because they expect headers to be located in `/usr/include` (which is empty or doesn't exist when the command line tools aren't installed).
+
+On systems earlier than 10.9 you must open Xcode, go to Preferences, and download this component from the Downloads section. You will require an Apple ID to download the component. Starting with Mavericks you can install the command line tools by executing `xcode-select --install` on the command line.
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+'''Note:''' MacPorts 2.3.0 will print a warning if the command line tools are missing and advise you how to install them. The message will read:
+{{{
+The Xcode Command Line Tools don't appear to be installed; most ports will likely fail to build.
+}}}
+
+The message will advise you how to install the missing tools, on 10.9:
+{{{
+Install them by running `xcode-select --install'.
+}}}
+On Mountain Lion and below:
+{{{
+You can install them from Xcode's Preferences in the Downloads section.
+See https://guide.macports.org/chunked/installing.html#installing.xcode.lion for more information.
+}}}
+}}}
+
+== Xcode License Agreement == #xcode-eula
+Starting with Xcode 4.3, compilation of ports could fail if the Xcode EULA wasn't accepted. Run:
+{{{
+xcodebuild -license
+}}}
+from a terminal window and follow the prompts. After accepting the EULA, retry building the port.
+
+With some ports and some versions of Xcode (e.g. libunwind-headers with Xcode 4.4+ or any version of Xcode 5) you may need to accept the license as root, i.e.:
+{{{
+sudo xcodebuild -license
+}}}
+
+This may need to be repeated after any Xcode upgrade.
+
+{{{#!div class="important" style="background: #99d8c9; border-color: #2ca25f; color: #00441b;"
+'''Note:''' MacPorts >= 2.3.0 will print an error message and abort if it detects this situation. The message will read:
+{{{
+It seems you have not accepted the Xcode license; most ports will fail to build.
+Agree to the license by opening Xcode or running `sudo xcodebuild -license'.
+}}}
+}}}
