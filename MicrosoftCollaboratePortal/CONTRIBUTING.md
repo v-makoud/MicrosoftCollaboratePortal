@@ -1,10 +1,18 @@
+---
+title: Contribute to MS Collaborate documentation
+description: Covers the basic steps and guidelines for contributing to the documentation. 
+author: ikhapova
+ms.author: ikhapova
+ms.date: 11/25/2019
+---
+
 # Contributing to the MS Collaborate documentation
 
 Thank you for your interest in our documentation. We appreciate your feedback, edits, additions and help with improving our docs. This page covers the basic steps and guidelines for contributing.
 
-> [!IMPORTANT] 
+> [!IMPORTANT]
 > All repositories that publish to docs.microsoft.com have adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any questions or comments.<br> 
->
+> 
 > Minor corrections or clarifications to documentation and code examples in public repositories are covered by the [docs.microsoft.com Terms of Use](https://docs.microsoft.com/legal/termsofuse). New or significant changes will generate a comment in the pull request asking you to submit an online Contribution License Agreement (CLA) if you are not an employee of Microsoft. We need you to complete the online form before we can accept your pull request.
 
 ## How to make a change
